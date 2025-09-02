@@ -17,7 +17,7 @@ app.use(cors());
 connectDB();
 Cloudinary();
 
-app.get("/", (req, res) => res.redirect(process.env.FRONTEND_URL));
+app.get("/", (req, res) => res.send("api is working"));
 
 app.use("/user", userRoutes);
 app.use("/company", companyRoutes);
