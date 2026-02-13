@@ -36,6 +36,12 @@ const Dashboard = () => {
       path: "/dashboard/view-applications",
       icon: assets.person_tick_icon,
     },
+    {
+      id: "messages",
+      name: "Messages",
+      path: "/dashboard/messages",
+      icon: assets.message_icon || assets.home_icon,
+    },
   ];
 
   const handleLogout = () => {
@@ -49,7 +55,7 @@ const Dashboard = () => {
       location.pathname === "/dashboard" ||
       location.pathname === "/dashboard/"
     ) {
-      document.title = "Superio - Job Portal | Dashboard";
+      document.title = "Hirenest - Job Portal | Dashboard";
       navigate("/dashboard/manage-jobs");
     }
   }, [location.pathname, navigate]);

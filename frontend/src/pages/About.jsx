@@ -10,7 +10,7 @@ import { SlideLeft, SlideUp } from "../utils/Animation";
 const About = () => {
   return (
     <>
-      <Navbar />
+     
       <section>
         <Counter />
 

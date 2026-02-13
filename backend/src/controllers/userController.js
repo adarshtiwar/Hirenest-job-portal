@@ -222,8 +222,11 @@ export const uploadResume = async (req, res) => {
       });
     }
 
-    // Upload resume to Cloudinary
-    const uploadedResumeUrl = await cloudinary.uploader.upload(resumeFile.path);
+    // Upload resume to Cloudinary as a raw file (not image)
+    const uploadedResumeUrl = await cloudinary.uploader.upload(resumeFile.path, {
+      resource_type: "raw",
+      public_id: `resumes/${userId}_${Date.now()}`
+    });
     userData.resume = uploadedResumeUrl.secure_url;
 
     await userData.save();

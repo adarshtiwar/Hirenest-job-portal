@@ -15,31 +15,38 @@ import Dashborad from "./pages/Dashborad";
 import AddJobs from "./pages/AddJobs";
 import ManageJobs from "./pages/ManageJobs";
 import ViewApplications from "./pages/ViewApplications";
+import ResumeBuilder from "./pages/ResumeBuilder";
+import ResumeSkills from "./pages/ResumeSkills";
+import Chat from "./pages/Chat";
 import { AppContext } from "./context/AppContext";
 
 const App = () => {
   const { companyToken } = useContext(AppContext);
 
   return (
-    <AppLayout>
+    <>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/all-jobs/:category" element={<AllJobs />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/apply-job/:id" element={<ApplyJob />} />
-        <Route path="/applications" element={<Applications />} />
-        <Route path="/candidate-login" element={<CandidatesLogin />} />
-        <Route path="/candidate-signup" element={<CandidatesSignup />} />
-        <Route path="/recruiter-login" element={<RecruiterLogin />} />
-        <Route path="/recruiter-signup" element={<RecruiterSignup />} />]
+        <Route path="/" element={<AppLayout><Home /></AppLayout>} />
+        <Route path="/all-jobs/:category" element={<AppLayout><AllJobs /></AppLayout>} />
+        <Route path="/terms" element={<AppLayout><Terms /></AppLayout>} />
+        <Route path="/about" element={<AppLayout><About /></AppLayout>} />
+        <Route path="/apply-job/:id" element={<AppLayout><ApplyJob /></AppLayout>} />
+        <Route path="/applications" element={<AppLayout><Applications /></AppLayout>} />
+        <Route path="/candidate-login" element={<AppLayout><CandidatesLogin /></AppLayout>} />
+        <Route path="/candidate-signup" element={<AppLayout><CandidatesSignup /></AppLayout>} />
+        <Route path="/recruiter-login" element={<AppLayout><RecruiterLogin /></AppLayout>} />
+        <Route path="/recruiter-signup" element={<AppLayout><RecruiterSignup /></AppLayout>} />
+        <Route path="/resume-builder" element={<AppLayout><ResumeBuilder /></AppLayout>} />
+        <Route path="/resume-skills" element={<AppLayout><ResumeSkills /></AppLayout>} />
+        <Route path="/chat" element={<AppLayout><Chat /></AppLayout>} />
         <Route path="/dashboard" element={<Dashborad />}>
           <Route path="add-job" element={<AddJobs />} />
           <Route path="manage-jobs" element={<ManageJobs />} />
           <Route path="view-applications" element={<ViewApplications />} />
+          <Route path="messages" element={<Chat />} />
         </Route>
       </Routes>
-    </AppLayout>
+    </>
   );
 };
 

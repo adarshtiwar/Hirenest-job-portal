@@ -2,7 +2,6 @@ import React, { useContext, useEffect } from "react";
 import FeaturedJob from "../components/FeaturedJob";
 import Hero from "../components/Hero";
 import JobCategoryt from "../components/JobCategory";
-import Navbar from "../components/Navbar";
 import Testimonials from "../components/Testimonials";
 import Counter from "../components/Counter";
 import Download from "../components/Download";
@@ -17,16 +16,15 @@ const Home = () => {
   }, []);
 
   return (
-    <>
-      <Navbar />
+    <div>
       <Hero />
       <JobCategoryt />
       <FeaturedJob />
+      <Counter />
       <Testimonials />
-      {/* <Counter /> */}
       <Download />
       <Footer />
-    </>
+    </div>
   );
 }; 
 

@@ -5,7 +5,11 @@ import { toast } from "react-hot-toast";
 export const AppContext = createContext();
 
 export const AppContextProvider = ({ children }) => {
-  const backendUrl = "https://hirenest-job-portal-ba.onrender.com";
+  const defaultProdUrl = "https://hirenest-job-portal-ba.onrender.com";
+  const inferredLocalUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : defaultProdUrl;
+  const backendUrl = import.meta?.env?.VITE_BACKEND_URL || inferredLocalUrl;
 
   const [searchFilter, setSearchFilter] = useState({ title: "", location: "" });
   const [isSearched, setIsSearched] = useState(false);

@@ -77,7 +77,7 @@ export const registerCompany = async (req, res) => {
       message: "Registration failed",
     });
   }
-};
+}; 
 
 export const loginCompany = async (req, res) => {
   try {

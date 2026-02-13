@@ -8,7 +8,7 @@ import { SlideLeft, SlideUp } from "../utils/Animation";
 const Terms = () => {
   return (
     <>
-      <Navbar />
+     
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Page Header */}
         <motion.div

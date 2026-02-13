@@ -66,7 +66,7 @@ const ViewApplications = () => {
   };
 
   useEffect(() => {
-    document.title = "Superio - Job Portal | Dashboard";
+    document.title = "Hirenest - Job Portal | Dashboard";
   }, []);
 
   useEffect(() => {

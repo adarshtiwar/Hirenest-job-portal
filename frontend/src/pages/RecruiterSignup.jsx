@@ -54,7 +54,6 @@ const RecruiterSignup = () => {
 
   return (
     <>
-      <Navbar />
       <div className="flex flex-col min-h-screen">
         <main className="flex-grow flex items-center justify-center">
           <div className="w-full max-w-md border border-gray-200 rounded-lg p-6 bg-white shadow">

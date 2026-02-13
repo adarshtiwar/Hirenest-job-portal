@@ -28,6 +28,9 @@ const Navbar = () => {
   const menu = [
     { name: "Home", path: "/" },
     { name: "All Jobs", path: "/all-jobs/all" },
+    { name: "Chat", path: "/chat" },
+    { name: "Resume", path: "/resume-builder" },
+    { name: "Skills & Jobs", path: "/resume-skills" },
     { name: "About", path: "/about" },
     { name: "Terms", path: "/terms" },
   ];
@@ -79,7 +82,7 @@ const Navbar = () => {
   }, [location.pathname]);
 
   return (
-    <header className="border-b border-gray-200 mb-10">
+    <header className="border-b border-gray-200 mb-10 ml-2 mr-2">
       <nav>
         <div className="h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center">

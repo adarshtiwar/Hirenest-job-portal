@@ -67,7 +67,7 @@ const Applications = () => {
 
   return (
     <>
-      <Navbar />
+     
       <section>
         {/* Resume Section */}
         <div className="mb-10">

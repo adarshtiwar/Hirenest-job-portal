@@ -9,7 +9,7 @@ const Counter = () => {
   return (
     <section>
       {/* Main Content Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-stretch gap-8 mb-6">
+      <div className="mt-6 flex flex-col lg:flex-row justify-between items-stretch gap-8 mb-6">
         {/* Image Container */}
         <div className="lg:w-[50%] lg:h-[400px] w-full flex">
           <motion.img

@@ -6,7 +6,7 @@ const companyAuthMiddleware = async (req, res, next) => {
     const token = req.headers.token;
 
     if (!token) {
-      return res.status(401).json({ message: "Unauthorized login again" });
+      return res.status(401).json({ message: "Unauthorized: Please login first" });
     }
 
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);

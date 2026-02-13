@@ -67,7 +67,7 @@ const Download = () => {
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ stiffness: 90, delay: 0.1 }}
             src={assets.download_image}
-            alt="Superio App Preview"
+            alt="Hirenest App Preview"
             className="w-full max-w-md lg:max-w-none h-auto object-contain"
           />
         </div>

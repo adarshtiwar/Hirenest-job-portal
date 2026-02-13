@@ -155,7 +155,6 @@ function AllJobs() {
 
   return (
     <>
-      <Navbar />
       <section>
         <div className="md:hidden flex justify-end mb-4">
           <button
