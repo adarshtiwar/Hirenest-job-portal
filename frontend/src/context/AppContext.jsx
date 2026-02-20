@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 export const AppContext = createContext();
 
 export const AppContextProvider = ({ children }) => {
-  const defaultProdUrl = "https://hirenest-job-portal-ba.onrender.com";
+  const defaultProdUrl = "https://hirenest-job-portal-backend.onrender.com";
   const inferredLocalUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:5000'
     : defaultProdUrl;
