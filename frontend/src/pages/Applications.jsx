@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { assets } from "../assets/assets";
 import moment from "moment";
@@ -16,6 +15,7 @@ const Applications = () => {
     backendUrl,
     userToken,
     userData,
+    setUserData,
     fetchUserData,
     fetchUserApplication,
   } = useContext(AppContext);
@@ -48,6 +48,13 @@ const Applications = () => {
 
       if (data.success) {
         toast.success(data.message);
+        setUserData((prev) => ({
+          ...prev,
+          resume: data.resumeUrl,
+          atsScore: data.atsScore,
+          atsImprovements: data.atsImprovements,
+          skills: data.skills,
+        }));
         setIsEdit(false);
         fetchUserData();
       } else {
@@ -136,6 +143,40 @@ const Applications = () => {
             </div>
           )}
         </div>
+
+        {userData?.resume && (
+          <div className="mb-10 border border-gray-200 rounded-lg p-4 bg-white">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">
+              ATS Score:{" "}
+              <span
+                className={
+                  userData?.atsScore >= 70
+                    ? "text-green-600"
+                    : userData?.atsScore >= 40
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }
+              >
+                {Number(userData?.atsScore || 0)}%
+              </span>
+            </h2>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Key Areas of Improvement
+            </h3>
+            {Array.isArray(userData?.atsImprovements) &&
+            userData.atsImprovements.length > 0 ? (
+              <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                {userData.atsImprovements.map((item, index) => (
+                  <li key={`${item}-${index}`}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Your resume looks strong. Keep tailoring it for each job post.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Applications Table */}
         {applicationsLoading ? (

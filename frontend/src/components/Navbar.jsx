@@ -1,6 +1,7 @@
 import {
   Briefcase,
   ChevronDown,
+  FileSearch,
   LoaderCircle,
   LogOut,
   Menu,
@@ -151,6 +152,13 @@ const Navbar = () => {
                       <Briefcase size={16} />
                       Applied Jobs
                     </Link>
+                    <Link
+                      to="/ats-calculator"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                    >
+                      <FileSearch size={16} />
+                      ATS Calculation
+                    </Link>
 
                     <button
                       className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 gap-2"
@@ -258,12 +266,22 @@ const Navbar = () => {
                 <ul className="space-y-1">
                   <li>
                     <Link
-                      to="/applied-jobs"
+                      to="/applications"
                       onClick={toggleMenu}
                       className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
                     >
                       <Briefcase size={16} />
                       Applied Jobs
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/ats-calculator"
+                      onClick={toggleMenu}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      <FileSearch size={16} />
+                      ATS Calculation
                     </Link>
                   </li>
                   <li>

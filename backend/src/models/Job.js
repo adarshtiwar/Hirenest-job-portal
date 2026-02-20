@@ -7,6 +7,7 @@ const jobSchema = mongoose.Schema({
   description: { type: String, required: true },
   salary: { type: Number, required: true },
   category: { type: String, required: true },
+  skills: { type: [String], default: [] },
   companyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Company",

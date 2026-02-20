@@ -18,6 +18,7 @@ import ViewApplications from "./pages/ViewApplications";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import ResumeSkills from "./pages/ResumeSkills";
 import Chat from "./pages/Chat";
+import AtsCalculator from "./pages/AtsCalculator";
 import { AppContext } from "./context/AppContext";
 
 const App = () => {
@@ -32,6 +33,7 @@ const App = () => {
         <Route path="/about" element={<AppLayout><About /></AppLayout>} />
         <Route path="/apply-job/:id" element={<AppLayout><ApplyJob /></AppLayout>} />
         <Route path="/applications" element={<AppLayout><Applications /></AppLayout>} />
+        <Route path="/ats-calculator" element={<AppLayout><AtsCalculator /></AppLayout>} />
         <Route path="/candidate-login" element={<AppLayout><CandidatesLogin /></AppLayout>} />
         <Route path="/candidate-signup" element={<AppLayout><CandidatesSignup /></AppLayout>} />
         <Route path="/recruiter-login" element={<AppLayout><RecruiterLogin /></AppLayout>} />

@@ -1,10 +1,6 @@
 import User from "../models/User.js";
 import Job from "../models/Job.js";
 import natural from "natural";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-import fs from "fs";
-import path from "path";
 // Import pdf-parse dynamically to avoid initialization errors
 const pdfParse = async (buffer) => {
   try {
@@ -15,9 +11,6 @@ const pdfParse = async (buffer) => {
     return { text: "" };
   }
 };
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Initialize Natural NLP tools
 const tokenizer = new natural.WordTokenizer();
@@ -49,6 +42,92 @@ const techSkills = [
   "education", "certification", "degree", "diploma", "license", "accreditation", "qualification"
 ];
 
+const skillAliases = {
+  "node.js": "node",
+  nodejs: "node",
+  "react.js": "react",
+  reactjs: "react",
+  "next.js": "nextjs",
+  next: "nextjs",
+  "vue.js": "vue",
+  vuejs: "vue",
+  js: "javascript",
+  ts: "typescript",
+  "tailwindcss": "tailwind",
+  "express.js": "express",
+  postgres: "sql",
+  postgresql: "sql",
+  mysql: "sql",
+};
+
+const escapeRegExp = (value = "") =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeText = (value = "") =>
+  value
+    .toString()
+    .toLowerCase()
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[^\w\s#+./-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const extractSkillsFromText = (rawText = "") => {
+  const lowerRawText = (rawText || "").toString().toLowerCase();
+  const normalizedText = normalizeText(rawText);
+  if (!normalizedText) return [];
+
+  const extractedSkills = [];
+  const processedTokens = new Set();
+  const tokens = tokenizer.tokenize(normalizedText);
+
+  tokens.forEach((token) => {
+    const stemmedToken = stemmer.stem(token);
+
+    if (token.length > 2 && !processedTokens.has(stemmedToken)) {
+      processedTokens.add(stemmedToken);
+
+      const matchedSkill = techSkills.find(
+        (skill) =>
+          skill === token ||
+          stemmer.stem(skill.replace(/\s+/g, "")) === stemmedToken ||
+          stemmer.stem(skill) === stemmedToken
+      );
+
+      if (matchedSkill && !extractedSkills.includes(matchedSkill)) {
+        extractedSkills.push(matchedSkill);
+      }
+    }
+  });
+
+  techSkills.forEach((skill) => {
+    if (
+      skill.includes(" ") &&
+      normalizedText.includes(skill) &&
+      !extractedSkills.includes(skill)
+    ) {
+      extractedSkills.push(skill);
+    }
+  });
+
+  const searchableText = ` ${lowerRawText} ${normalizedText} `;
+
+  Object.entries(skillAliases).forEach(([alias, canonicalSkill]) => {
+    const aliasRegex = new RegExp(
+      `(^|[^a-z0-9+#])${escapeRegExp(alias)}(?=$|[^a-z0-9+#])`,
+      "i"
+    );
+    if (
+      aliasRegex.test(searchableText) &&
+      !extractedSkills.includes(canonicalSkill)
+    ) {
+      extractedSkills.push(canonicalSkill);
+    }
+  });
+
+  return extractedSkills;
+};
+
 // Extract skills from resume
 export const extractSkills = async (req, res) => {
   try {
@@ -67,57 +146,31 @@ export const extractSkills = async (req, res) => {
     let resumeText = "";
     const resumeUrl = user.resume;
     
-    if (resumeUrl.endsWith('.pdf')) {
-      // Handle PDF resume
-      const response = await fetch(resumeUrl);
+    const response = await fetch(resumeUrl);
+    if (!response.ok) {
+      return res.status(400).json({
+        message: "Could not read resume file",
+      });
+    }
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    const cleanUrl = resumeUrl.split("?")[0].toLowerCase();
+
+    if (cleanUrl.endsWith(".pdf") || contentType.includes("application/pdf")) {
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const data = await pdfParse(buffer);
       resumeText = data.text;
-    } else if (resumeUrl.endsWith('.html')) {
-      // Handle HTML resume
-      const response = await fetch(resumeUrl);
-      const html = await response.text();
-      // Simple HTML to text conversion (can be improved with a proper HTML parser)
-      resumeText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     } else {
-      // Handle plain text resume
-      const response = await fetch(resumeUrl);
-      resumeText = await response.text();
+      const rawText = await response.text();
+      if (cleanUrl.endsWith(".html") || contentType.includes("text/html")) {
+        resumeText = rawText.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      } else {
+        resumeText = rawText;
+      }
     }
     
-    // Tokenize and normalize text
-    const tokens = tokenizer.tokenize(resumeText.toLowerCase());
-    
-    // Extract skills
-    const extractedSkills = [];
-    const processedTokens = new Set();
-    
-    // Process single tokens
-    tokens.forEach(token => {
-      const stemmedToken = stemmer.stem(token);
-      
-      if (token.length > 2 && !processedTokens.has(stemmedToken)) {
-        processedTokens.add(stemmedToken);
-        
-        // Check if token is a known skill
-        const matchedSkill = techSkills.find(skill => 
-          skill === token || stemmer.stem(skill) === stemmedToken
-        );
-        
-        if (matchedSkill && !extractedSkills.includes(matchedSkill)) {
-          extractedSkills.push(matchedSkill);
-        }
-      }
-    });
-    
-    // Process multi-word skills
-    const resumeTextLower = resumeText.toLowerCase();
-    techSkills.forEach(skill => {
-      if (skill.includes(' ') && resumeTextLower.includes(skill) && !extractedSkills.includes(skill)) {
-        extractedSkills.push(skill);
-      }
-    });
+    // Extract and store normalized skills on user
+    const extractedSkills = extractSkillsFromText(resumeText);
     
     // Update user with extracted skills
     user.skills = extractedSkills;
@@ -141,21 +194,46 @@ export const getJobRecommendations = async (req, res) => {
     }
     
     if (!user.skills || user.skills.length === 0) {
+      if (!user.resume) {
+        return res.status(400).json({ message: "No skills found for this user" });
+      }
+
+      try {
+        const resumeResponse = await fetch(user.resume);
+        if (resumeResponse.ok) {
+          const resumeRawText = await resumeResponse.text();
+          user.skills = extractSkillsFromText(resumeRawText);
+          await user.save();
+        }
+      } catch (error) {
+        console.error("Skill hydration from resume failed:", error);
+      }
+    }
+
+    if (!user.skills || user.skills.length === 0) {
       return res.status(400).json({ message: "No skills found for this user" });
     }
     
-    // Get all active jobs
-    const allJobs = await Job.find({ status: "active" }).populate("company", "companyName logo location");
+    // Get all visible jobs with company data
+    const allJobs = await Job.find({ visible: true }).populate("companyId", "name image");
     
     // Calculate job match scores
-    const jobMatches = allJobs.map(job => {
-      const jobSkills = job.skills || [];
-      const jobSkillsLower = jobSkills.map(skill => skill.toLowerCase());
+    const userSkillsLower = user.skills.map((skill) => skill.toLowerCase());
+    const jobMatches = allJobs.map((job) => {
+      const inferredSkills = extractSkillsFromText(
+        `${job.title || ""} ${job.category || ""} ${job.description || ""}`
+      );
+      const jobSkills = Array.isArray(job.skills) && job.skills.length > 0 ? job.skills : inferredSkills;
+      const jobSkillsLower = jobSkills.map((skill) => skill.toLowerCase());
       
       // Count matching skills
       let matchCount = 0;
-      user.skills.forEach(userSkill => {
-        if (jobSkillsLower.some(jobSkill => jobSkill.includes(userSkill) || userSkill.includes(jobSkill))) {
+      userSkillsLower.forEach((userSkill) => {
+        if (
+          jobSkillsLower.some(
+            (jobSkill) => jobSkill.includes(userSkill) || userSkill.includes(jobSkill)
+          )
+        ) {
           matchCount++;
         }
       });
@@ -168,7 +246,14 @@ export const getJobRecommendations = async (req, res) => {
       return {
         job,
         matchPercentage,
-        matchCount
+        matchCount,
+        matchedSkillNames: user.skills.filter((userSkill) =>
+          jobSkillsLower.some(
+            (jobSkill) =>
+              jobSkill.includes(userSkill.toLowerCase()) ||
+              userSkill.toLowerCase().includes(jobSkill)
+          )
+        ),
       };
     });
     
@@ -176,13 +261,16 @@ export const getJobRecommendations = async (req, res) => {
     jobMatches.sort((a, b) => b.matchPercentage - a.matchPercentage);
     
     // Return top recommendations
-    const recommendations = jobMatches.slice(0, 10).map(match => ({
+    const recommendations = jobMatches
+      .slice(0, 10)
+      .map((match) => ({
       ...match.job.toObject(),
       matchPercentage: match.matchPercentage,
-      matchedSkills: match.matchCount
+      matchedSkills: match.matchCount,
+      matchedSkillNames: match.matchedSkillNames,
     }));
     
-    res.status(200).json(recommendations);
+    res.status(200).json({ recommendations });
   } catch (error) {
     console.error("Error getting job recommendations:", error);
     res.status(500).json({ message: "Failed to get job recommendations", error: error.message });

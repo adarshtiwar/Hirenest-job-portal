@@ -5,6 +5,10 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import JobApplication from "../models/JobApplication.js";
 import Job from "../models/Job.js";
+import {
+  calculateAtsFromText,
+  extractTextFromLocalResume,
+} from "../utils/resumeAnalyzer.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -222,19 +226,33 @@ export const uploadResume = async (req, res) => {
       });
     }
 
+    const resumeText = await extractTextFromLocalResume(
+      resumeFile.path,
+      resumeFile.mimetype,
+      resumeFile.originalname
+    );
+    const ats = calculateAtsFromText(resumeText);
+
     // Upload resume to Cloudinary as a raw file (not image)
     const uploadedResumeUrl = await cloudinary.uploader.upload(resumeFile.path, {
       resource_type: "raw",
       public_id: `resumes/${userId}_${Date.now()}`
     });
+
     userData.resume = uploadedResumeUrl.secure_url;
+    userData.skills = ats.skills;
+    userData.atsScore = ats.score;
+    userData.atsImprovements = ats.improvements;
 
     await userData.save();
 
     return res.status(200).json({
       success: true,
-      message: "Resume uploaded successfully",
+      message: "Resume uploaded and ATS analysis completed",
       resumeUrl: userData.resume,
+      atsScore: userData.atsScore,
+      atsImprovements: userData.atsImprovements,
+      skills: userData.skills,
     });
   } catch (error) {
     console.error("Upload error:", error);

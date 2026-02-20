@@ -290,7 +290,10 @@ const ResumeBuilder = () => {
       if (data.success) {
         setUserData({
           ...userData,
-          resume: data.resumeUrl
+          resume: data.resumeUrl,
+          atsScore: data.atsScore,
+          atsImprovements: data.atsImprovements,
+          skills: data.skills,
         });
         navigate('/resume-skills');
       } else {

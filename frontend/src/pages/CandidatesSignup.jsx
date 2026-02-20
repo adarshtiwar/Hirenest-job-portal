@@ -4,7 +4,6 @@ import React, { useContext, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
-import Navbar from "../components/Navbar";
 import { AppContext } from "../context/AppContext";
 
 const CandidatesSignup = () => {
@@ -62,7 +61,6 @@ const CandidatesSignup = () => {
 
   return (
     <>
-      <Navbar />
       <div>
         <main className="flex-grow flex items-center justify-center">
           <div className="w-full max-w-md border border-gray-200 rounded-lg p-6">

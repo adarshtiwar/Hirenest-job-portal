@@ -10,6 +10,7 @@ const ResumeSkills = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [extracting, setExtracting] = useState(false);
+  const [skillsChecked, setSkillsChecked] = useState(false);
   
   useEffect(() => {
     if (userData && userData.resume) {
@@ -30,14 +31,18 @@ const ResumeSkills = () => {
       const data = await response.json();
       
       if (response.ok) {
-        setSkills(data.skills);
+        const extractedSkills = Array.isArray(data.skills) ? data.skills : [];
+        setSkills(extractedSkills);
+        setSkillsChecked(true);
         getJobRecommendations();
       } else {
         setError(data.message || 'Failed to extract skills');
+        setSkillsChecked(true);
         setLoading(false);
       }
     } catch (err) {
       setError('An error occurred while extracting skills');
+      setSkillsChecked(true);
       setLoading(false);
       console.error(err);
     } finally {
@@ -52,7 +57,12 @@ const ResumeSkills = () => {
       const data = await response.json();
       
       if (response.ok) {
-        setRecommendations(data.recommendations);
+        const recommendedJobs = Array.isArray(data?.recommendations)
+          ? data.recommendations
+          : Array.isArray(data)
+            ? data
+            : [];
+        setRecommendations(recommendedJobs);
       } else {
         setError(data.message || 'Failed to get job recommendations');
       }
@@ -104,6 +114,12 @@ const ResumeSkills = () => {
           </div>
         </div>
       )}
+
+      {!extracting && skillsChecked && skills.length === 0 && !error && (
+        <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded mb-4">
+          No skills were extracted from your resume. Add a clear skills section in your resume and try again.
+        </div>
+      )}
       
       {loading && !extracting && (
         <div className="text-center py-8">
@@ -133,7 +149,7 @@ const ResumeSkills = () => {
         <div className="text-center py-8 bg-gray-50 rounded-lg">
           <p className="text-gray-600">No job recommendations found based on your skills.</p>
           <p className="mt-2">
-            <Link to="/all-jobs" className="text-blue-500 hover:underline">
+            <Link to="/all-jobs/all" className="text-blue-500 hover:underline">
               Browse all available jobs
             </Link>
           </p>
