@@ -9,6 +9,10 @@ const userSchema = mongoose.Schema({
   skills: { type: [String], default: [] },
   atsScore: { type: Number, default: 0 },
   atsImprovements: { type: [String], default: [] },
+
+  isVerified: { type: Boolean, default: false },
+  otp: { type: String },
+  otpExpiry: { type: Date },
 });
 
 const User = mongoose.model("User", userSchema);

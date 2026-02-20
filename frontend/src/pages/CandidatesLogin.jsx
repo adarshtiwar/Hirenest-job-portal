@@ -1,16 +1,17 @@
 import React, { useContext, useState } from "react";
 import Footer from "../components/Footer";
-import Navbar from "../components/Navbar";
 import { Mail, Lock, LoaderCircle } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom"; // ✅ Added useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
+import ForgotPasswordModal from "../components/auth/ForgotPasswordModal";
 
 const CandidatesLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const navigate = useNavigate();
 
@@ -19,7 +20,7 @@ const CandidatesLogin = () => {
 
   const userLoginHandler = async (e) => {
     e.preventDefault();
-    setLoading(true); //
+    setLoading(true);
     try {
       const { data } = await axios.post(`${backendUrl}/user/login-user`, {
         email,
@@ -91,6 +92,13 @@ const CandidatesLogin = () => {
                   />
                   <span className="text-sm text-gray-600">Remember me</span>
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <button
@@ -121,6 +129,23 @@ const CandidatesLogin = () => {
         </main>
         <Footer />
       </div>
+
+      <ForgotPasswordModal
+        open={showForgot}
+        onClose={() => setShowForgot(false)}
+        backendUrl={backendUrl}
+        title="Candidate Password Reset"
+        requestEndpoints={[
+          "/user/forgot-password",
+          "/user/send-reset-otp",
+          "/user/forgot-password-otp",
+        ]}
+        resetEndpoints={[
+          "/user/reset-password",
+          "/user/reset-password-with-otp",
+          "/user/verify-reset-otp",
+        ]}
+      />
     </>
   );
 };

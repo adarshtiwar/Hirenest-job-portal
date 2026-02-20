@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
+import sendOtpEmail from "../utils/sendEmail.js";
 
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
@@ -10,63 +11,132 @@ import {
   extractTextFromLocalResume,
 } from "../utils/resumeAnalyzer.js";
 
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const imageFile = req.file;
 
-    if (!name) {
-      return res.json({ success: false, message: "Enter your name" });
-    }
-
-    if (!email) {
-      return res.json({ success: false, message: "Enter your email" });
-    }
-
-    if (!password) {
-      return res.json({ success: false, message: "Enter your password" });
-    }
-
-    if (!imageFile) {
-      return res.json({ success: false, message: "Upload your image" });
-    }
+    if (!name) return res.json({ success: false, message: "Enter your name" });
+    if (!email) return res.json({ success: false, message: "Enter your email" });
+    if (!password) return res.json({ success: false, message: "Enter your password" });
+    if (!imageFile) return res.json({ success: false, message: "Upload your image" });
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.json({ success: false, message: "User already exists" });
+      if (existingUser.isVerified) {
+        return res.json({ success: false, message: "User already exists" });
+      }
+
+      existingUser.otp = generateOtp();
+      existingUser.otpExpiry = Date.now() + OTP_EXPIRY_MS;
+      await existingUser.save();
+
+      await sendOtpEmail(existingUser.email, existingUser.otp);
+
+      return res.json({
+        success: true,
+        message: "OTP resent to your email. Please verify.",
+        email: existingUser.email,
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const imageUploadUrl = await cloudinary.uploader.upload(imageFile.path);
+    const otp = generateOtp();
 
-    const user = await User({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
       image: imageUploadUrl.secure_url,
+      otp,
+      otpExpiry: Date.now() + OTP_EXPIRY_MS,
+      isVerified: false,
     });
 
-    await user.save();
-
-    const token = await generateToken(user._id);
+    await sendOtpEmail(email, otp);
 
     return res.json({
       success: true,
-      message: "Registration successful",
-      userData: user,
-      token,
+      message: "OTP sent to your email. Please verify.",
+      email: user.email,
     });
   } catch (error) {
     console.log(error);
-
     return res.json({
       success: false,
       message: "Registration failed",
     });
   }
 };
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "User already verified",
+      });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    if (!user.otpExpiry || user.otpExpiry < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired",
+      });
+    }
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+
+    const token = await generateToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      token,
+      userData: user,
+    });
+  } catch (error) {
+    console.error("OTP Verification Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Verification failed",
+    });
+  }
+};
+
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -91,6 +161,13 @@ export const loginUser = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email with OTP before login",
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -110,6 +187,79 @@ export const loginUser = async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({ success: false, message: "Login failed" });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    user.otp = generateOtp();
+    user.otpExpiry = Date.now() + OTP_EXPIRY_MS;
+    await user.save();
+
+    await sendOtpEmail(email, user.otp, {
+      subject: "Reset Password OTP - Hirenest",
+      title: "Reset Password",
+      description: "Use this OTP to reset your password:",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset OTP sent to your email",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ success: false, message: "Failed to send reset OTP" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword, password } = req.body;
+    const resolvedPassword = newPassword || password;
+
+    if (!email || !otp || !resolvedPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP and new password are required",
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+
+    if (!user.otpExpiry || user.otpExpiry < Date.now()) {
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
+
+    user.password = await bcrypt.hash(resolvedPassword, 10);
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successful",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({ success: false, message: "Failed to reset password" });
   }
 };
 
@@ -233,10 +383,9 @@ export const uploadResume = async (req, res) => {
     );
     const ats = calculateAtsFromText(resumeText);
 
-    // Upload resume to Cloudinary as a raw file (not image)
     const uploadedResumeUrl = await cloudinary.uploader.upload(resumeFile.path, {
       resource_type: "raw",
-      public_id: `resumes/${userId}_${Date.now()}`
+      public_id: `resumes/${userId}_${Date.now()}`,
     });
 
     userData.resume = uploadedResumeUrl.secure_url;

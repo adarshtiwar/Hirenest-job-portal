@@ -2,9 +2,13 @@ import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 
 import generateToken from "../utils/generateToken.js";
+import sendOtpEmail from "../utils/sendEmail.js";
 import Company from "../models/Company.js";
 import Job from "../models/Job.js";
 import JobApplication from "../models/JobApplication.js";
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
 
 export const registerCompany = async (req, res) => {
   try {
@@ -38,36 +42,55 @@ export const registerCompany = async (req, res) => {
     const existingCompany = await Company.findOne({ email });
 
     if (existingCompany) {
-      return res
-        .status(409)
-        .json({ success: false, message: "Company already exists" });
+      if (existingCompany.isVerified) {
+        return res
+          .status(409)
+          .json({ success: false, message: "Company already exists" });
+      }
+
+      existingCompany.otp = generateOtp();
+      existingCompany.otpExpiry = Date.now() + OTP_EXPIRY_MS;
+      await existingCompany.save();
+
+      await sendOtpEmail(existingCompany.email, existingCompany.otp, {
+        subject: "Verify Recruiter Account - Hirenest",
+        title: "Recruiter Email Verification",
+        description: "Use this OTP to verify your recruiter account:",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "OTP resent to your email. Please verify.",
+        email: existingCompany.email,
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const imageUpload = await cloudinary.uploader.upload(imageFile.path);
+    const otp = generateOtp();
 
     const company = new Company({
       name,
       email,
       password: hashedPassword,
       image: imageUpload.secure_url,
+      isVerified: false,
+      otp,
+      otpExpiry: Date.now() + OTP_EXPIRY_MS,
     });
 
     await company.save();
 
-    const token = await generateToken(company._id);
+    await sendOtpEmail(email, otp, {
+      subject: "Verify Recruiter Account - Hirenest",
+      title: "Recruiter Email Verification",
+      description: "Use this OTP to verify your recruiter account:",
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful",
-      companyData: {
-        _id: company._id,
-        name: company.name,
-        email: company.email,
-        image: company.image,
-      },
-      token,
+      message: "OTP sent to your email. Please verify.",
+      email: company.email,
     });
   } catch (error) {
     console.log(error);
@@ -77,7 +100,163 @@ export const registerCompany = async (req, res) => {
       message: "Registration failed",
     });
   }
-}; 
+};
+
+export const verifyCompanyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
+    }
+
+    const company = await Company.findOne({ email });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    if (company.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Company already verified",
+      });
+    }
+
+    if (company.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    if (!company.otpExpiry || company.otpExpiry < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired",
+      });
+    }
+
+    company.isVerified = true;
+    company.otp = null;
+    company.otpExpiry = null;
+    await company.save();
+
+    const token = await generateToken(company._id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      companyData: company,
+      token,
+    });
+  } catch (error) {
+    console.error("Company OTP verification error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Verification failed",
+    });
+  }
+};
+
+export const forgotCompanyPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const company = await Company.findOne({ email });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    company.otp = generateOtp();
+    company.otpExpiry = Date.now() + OTP_EXPIRY_MS;
+    await company.save();
+
+    await sendOtpEmail(email, company.otp, {
+      subject: "Reset Recruiter Password OTP - Hirenest",
+      title: "Reset Recruiter Password",
+      description: "Use this OTP to reset your recruiter password:",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset OTP sent to your email",
+    });
+  } catch (error) {
+    console.error("Company forgot password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send reset OTP",
+    });
+  }
+};
+
+export const resetCompanyPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword, password } = req.body;
+    const resolvedPassword = newPassword || password;
+
+    if (!email || !otp || !resolvedPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP and new password are required",
+      });
+    }
+
+    const company = await Company.findOne({ email });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    if (company.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    if (!company.otpExpiry || company.otpExpiry < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired",
+      });
+    }
+
+    company.password = await bcrypt.hash(resolvedPassword, 10);
+    company.otp = null;
+    company.otpExpiry = null;
+    await company.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successful",
+    });
+  } catch (error) {
+    console.error("Company reset password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+    });
+  }
+};
 
 export const loginCompany = async (req, res) => {
   try {
@@ -101,6 +280,13 @@ export const loginCompany = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Company not found" });
+    }
+
+    if (!company.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email with OTP before login",
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, company.password);

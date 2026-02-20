@@ -2,23 +2,24 @@ import { Lock, Mail, LoaderCircle } from "lucide-react";
 import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
-import Navbar from "../components/Navbar";
 import { AppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
 import axios from "axios";
+import ForgotPasswordModal from "../components/auth/ForgotPasswordModal";
 
 const RecruiterLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const { backendUrl, setCompanyData, setCompanyToken } =
     useContext(AppContext);
-  const navigate = useNavigate(); // ✅ Added useNavigate
+  const navigate = useNavigate();
 
   const recruiterLogin = async (e) => {
     e.preventDefault();
-    setLoading(true); // ✅ Fixed loading state
+    setLoading(true);
 
     try {
       const { data } = await axios.post(`${backendUrl}/company/login-company`, {
@@ -90,6 +91,13 @@ const RecruiterLogin = () => {
                   />
                   <span className="text-sm text-gray-600">Remember me</span>
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <button
@@ -120,6 +128,23 @@ const RecruiterLogin = () => {
         </main>
         <Footer />
       </div>
+
+      <ForgotPasswordModal
+        open={showForgot}
+        onClose={() => setShowForgot(false)}
+        backendUrl={backendUrl}
+        title="Recruiter Password Reset"
+        requestEndpoints={[
+          "/company/forgot-password",
+          "/company/send-reset-otp",
+          "/company/forgot-password-otp",
+        ]}
+        resetEndpoints={[
+          "/company/reset-password",
+          "/company/reset-password-with-otp",
+          "/company/verify-reset-otp",
+        ]}
+      />
     </>
   );
 };

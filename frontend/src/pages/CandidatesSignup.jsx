@@ -12,6 +12,9 @@ const CandidatesSignup = () => {
   const [password, setPassword] = useState("");
   const [image, setImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [otp, setOtp] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [otpStep, setOtpStep] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -43,17 +46,49 @@ const CandidatesSignup = () => {
       );
 
       if (data.success) {
-        setUserToken(data.token);
-        setUserData(data.userData);
-        setIsLogin(true);
-        toast.success(data.message);
-        navigate("/");
-        localStorage.setItem("userToken", data.token);
+        if (data.token) {
+          setUserToken(data.token);
+          setUserData(data.userData);
+          setIsLogin(true);
+          toast.success(data.message);
+          navigate("/");
+          localStorage.setItem("userToken", data.token);
+        } else {
+          setPendingEmail(data.email || email);
+          setOtpStep(true);
+          toast.success(data.message || "OTP sent. Verify your email to continue.");
+        }
       } else {
         toast.error(data.message);
       }
     } catch (error) {
       toast.error(error?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtpHandler = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data } = await axios.post(`${backendUrl}/user/verify-otp`, {
+        email: pendingEmail || email,
+        otp,
+      });
+
+      if (data.success) {
+        setUserToken(data.token);
+        setUserData(data.userData);
+        setIsLogin(true);
+        localStorage.setItem("userToken", data.token);
+        toast.success(data.message || "Email verified successfully");
+        navigate("/");
+      } else {
+        toast.error(data.message || "OTP verification failed");
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "OTP verification failed");
     } finally {
       setLoading(false);
     }
@@ -73,6 +108,47 @@ const CandidatesSignup = () => {
               </p>
             </div>
 
+            {otpStep ? (
+              <form className="space-y-4" onSubmit={verifyOtpHandler}>
+                <div className="text-sm text-gray-600">
+                  Enter the OTP sent to{" "}
+                  <span className="font-medium">{pendingEmail || email}</span>
+                </div>
+                <div className="border border-gray-300 rounded flex items-center p-2.5">
+                  <Mail className="h-5 w-5 text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="6-digit OTP"
+                    className="w-full outline-none text-sm bg-transparent placeholder-gray-400"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition flex justify-center items-center cursor-pointer ${
+                    loading ? "cursor-not-allowed opacity-50" : ""
+                  }`}
+                >
+                  {loading ? (
+                    <LoaderCircle className="animate-spin h-5 w-5" />
+                  ) : (
+                    "Verify OTP"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOtpStep(false)}
+                  className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Back to signup
+                </button>
+              </form>
+            ) : (
             <form className="space-y-4" onSubmit={userSignupHanlder}>
               <div className="flex flex-col items-center mb-4">
                 <label className="relative cursor-pointer">
@@ -180,6 +256,7 @@ const CandidatesSignup = () => {
                 </Link>
               </div>
             </form>
+            )}
           </div>
         </main>
         <Footer />

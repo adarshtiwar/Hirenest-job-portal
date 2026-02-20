@@ -2,6 +2,9 @@ import express from "express";
 import {
   registerUser,
   loginUser,
+  verifyOtp,
+  forgotPassword,
+  resetPassword,
   fetchUserData,
   applyJob,
   getUserAppliedJobs,
@@ -13,7 +16,11 @@ import userAuthMiddleware from "../middlewares/userAuthMiddleware.js";
 const router = express.Router();
 
 router.post("/register-user", upload.single("image"), registerUser);
-router.post("/login-user", upload.single("image"), loginUser);
+router.post("/login-user", loginUser);
+router.post("/verify-otp", verifyOtp);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
+
 router.get("/user-data", userAuthMiddleware, fetchUserData);
 router.post("/apply-job", userAuthMiddleware, applyJob);
 router.post("/get-user-applications", userAuthMiddleware, getUserAppliedJobs);
