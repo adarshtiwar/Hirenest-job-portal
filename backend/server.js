@@ -33,7 +33,8 @@ app.get("/", (req, res) => res.send("api is working"));
 app.use("/user", userRoutes);
 app.use("/company", companyRoutes);
 app.use("/job", jobRoutes);
-// Support both legacy and new paths for chat and resume APIs
+
+
 app.use("/api/chat", chatRoutes);
 app.use("/chat", chatRoutes);
 app.use("/api/resume", resumeRoutes);
@@ -41,11 +42,11 @@ app.use("/resume", resumeRoutes);
 
 let onlineUsers = new Map(); 
 
-// Socket.io connection
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // 🔵 User comes online
+  
   socket.on("user_online", (userId) => {
     if (!userId) return;
 

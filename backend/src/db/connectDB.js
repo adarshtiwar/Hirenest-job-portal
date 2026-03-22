@@ -7,10 +7,10 @@ const connectDB = async () => {
     );
 
     console.log("✅ Database connected successfully");
-  } catch (error) {
+  } catch (error) { 
     console.log(error);
-    console.log("❎ Database connection failed");
-  }
+    console.log("❎ Database connection failed"); 
+  } 
 };
 
 export default connectDB;
