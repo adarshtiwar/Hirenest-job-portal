@@ -1,14 +1,67 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import { AppContext } from "../context/AppContext";
 
 const AtsCalculator = () => {
-  const { userData } = useContext(AppContext);
+  const { backendUrl, userData, userToken, setUserData } =
+    useContext(AppContext);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisAttempted, setAnalysisAttempted] = useState(false);
   const score = Number(userData?.atsScore || 0);
   const improvements = Array.isArray(userData?.atsImprovements)
     ? userData.atsImprovements
     : [];
+  const needsAnalysis = Boolean(
+    userData?.resume && userToken && score === 0 && improvements.length === 0
+  );
+  const displayImprovements =
+    needsAnalysis
+      ? [
+          analysisLoading
+            ? "Calculating ATS analysis for your uploaded resume..."
+            : "ATS analysis has not been generated for this resume yet.",
+        ]
+      : improvements;
   const skills = Array.isArray(userData?.skills) ? userData.skills : [];
+
+  useEffect(() => {
+    if (!needsAnalysis || analysisLoading || analysisAttempted) return;
+
+    const analyzeResume = async () => {
+      setAnalysisLoading(true);
+      setAnalysisAttempted(true);
+      try {
+        const { data } = await axios.post(
+          `${backendUrl}/api/resume/analyze`,
+          {},
+          { headers: { token: userToken } }
+        );
+
+        if (data.success) {
+          setUserData((prev) => ({
+            ...prev,
+            atsScore: data.atsScore,
+            atsImprovements: data.atsImprovements,
+            skills: data.skills,
+          }));
+        }
+      } catch (error) {
+        console.error("ATS analysis error:", error);
+      } finally {
+        setAnalysisLoading(false);
+      }
+    };
+
+    analyzeResume();
+  }, [
+    analysisAttempted,
+    analysisLoading,
+    backendUrl,
+    needsAnalysis,
+    setUserData,
+    userToken,
+  ]);
 
   return (
     <section className="max-w-5xl mx-auto py-4">
@@ -46,9 +99,9 @@ const AtsCalculator = () => {
             <h2 className="text-lg font-semibold text-gray-800 mb-3">
               Key Areas of Improvement
             </h2>
-            {improvements.length > 0 ? (
+            {displayImprovements.length > 0 ? (
               <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                {improvements.map((item, index) => (
+                {displayImprovements.map((item, index) => (
                   <li key={`${item}-${index}`}>{item}</li>
                 ))}
               </ul>

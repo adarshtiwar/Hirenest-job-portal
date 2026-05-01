@@ -1,5 +1,9 @@
 import { readFile } from "fs/promises";
+import { createRequire } from "module";
 import natural from "natural";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 const tokenizer = new natural.WordTokenizer();
 const stemmer = natural.PorterStemmer;
@@ -173,24 +177,38 @@ export const calculateAtsFromText = (rawText = "") => {
 };
 
 const parsePdfFromBuffer = async (buffer) => {
-  const pdf = await import("pdf-parse");
-  const data = await pdf.default(buffer);
+  const data = await pdfParse(buffer);
   return data.text || "";
 };
 
-export const extractTextFromLocalResume = async (filePath, mimeType = "", originalName = "") => {
+const bufferLooksLikePdf = (buffer) =>
+  buffer.subarray(0, 4).toString("utf8") === "%PDF";
+
+export const extractTextFromResumeBuffer = async (
+  buffer,
+  mimeType = "",
+  originalName = ""
+) => {
   const lowerName = (originalName || "").toLowerCase();
   const lowerMime = (mimeType || "").toLowerCase();
 
-  if (lowerMime.includes("pdf") || lowerName.endsWith(".pdf")) {
-    const buffer = await readFile(filePath);
+  if (
+    lowerMime.includes("pdf") ||
+    lowerName.endsWith(".pdf") ||
+    bufferLooksLikePdf(buffer)
+  ) {
     return parsePdfFromBuffer(buffer);
   }
 
-  const raw = await readFile(filePath, "utf8");
+  const raw = buffer.toString("utf8");
   if (lowerMime.includes("html") || lowerName.endsWith(".html")) {
     return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
   }
 
   return raw;
+};
+
+export const extractTextFromLocalResume = async (filePath, mimeType = "", originalName = "") => {
+  const buffer = await readFile(filePath);
+  return extractTextFromResumeBuffer(buffer, mimeType, originalName);
 };

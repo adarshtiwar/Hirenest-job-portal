@@ -1,5 +1,7 @@
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
+import { unlink } from "fs/promises";
+import path from "path";
 import sendOtpEmail from "../utils/sendEmail.js";
 
 import User from "../models/User.js";
@@ -356,9 +358,11 @@ export const getUserAppliedJobs = async (req, res) => {
 };
 
 export const uploadResume = async (req, res) => {
+  let resumeFile;
+
   try {
     const userId = req.userData._id;
-    const resumeFile = req.file;
+    resumeFile = req.file;
 
     if (!resumeFile) {
       return res.status(400).json({
@@ -376,17 +380,39 @@ export const uploadResume = async (req, res) => {
       });
     }
 
-    const resumeText = await extractTextFromLocalResume(
-      resumeFile.path,
-      resumeFile.mimetype,
-      resumeFile.originalname
-    );
-    const ats = calculateAtsFromText(resumeText);
-
+    const fileExtension = path
+      .extname(resumeFile.originalname || "")
+      .toLowerCase();
     const uploadedResumeUrl = await cloudinary.uploader.upload(resumeFile.path, {
       resource_type: "raw",
-      public_id: `resumes/${userId}_${Date.now()}`,
+      public_id: `resumes/${userId}_${Date.now()}${fileExtension}`,
     });
+
+    let ats = {
+      score: userData.atsScore || 0,
+      improvements: userData.atsImprovements || [],
+      skills: userData.skills || [],
+    };
+    let analysisCompleted = true;
+
+    try {
+      const resumeText = await extractTextFromLocalResume(
+        resumeFile.path,
+        resumeFile.mimetype,
+        resumeFile.originalname
+      );
+      ats = calculateAtsFromText(resumeText);
+    } catch (analysisError) {
+      analysisCompleted = false;
+      console.error("Resume ATS analysis error:", analysisError);
+      ats = {
+        score: 0,
+        improvements: [
+          "ATS analysis could not read this resume. Upload a text-based PDF or create a resume with the builder.",
+        ],
+        skills: [],
+      };
+    }
 
     userData.resume = uploadedResumeUrl.secure_url;
     userData.skills = ats.skills;
@@ -397,7 +423,9 @@ export const uploadResume = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Resume uploaded and ATS analysis completed",
+      message: analysisCompleted
+        ? "Resume uploaded and ATS analysis completed"
+        : "Resume uploaded successfully. ATS analysis could not read this file.",
       resumeUrl: userData.resume,
       atsScore: userData.atsScore,
       atsImprovements: userData.atsImprovements,
@@ -410,5 +438,9 @@ export const uploadResume = async (req, res) => {
       success: false,
       message: "Failed to upload resume",
     });
+  } finally {
+    if (resumeFile?.path) {
+      unlink(resumeFile.path).catch(() => {});
+    }
   }
 };

@@ -1,11 +1,18 @@
 import User from "../models/User.js";
 import Job from "../models/Job.js";
 import natural from "natural";
-// Import pdf-parse dynamically to avoid initialization errors
+import { createRequire } from "module";
+import {
+  calculateAtsFromText,
+  extractTextFromResumeBuffer,
+} from "../utils/resumeAnalyzer.js";
+
+const require = createRequire(import.meta.url);
+const parsePdf = require("pdf-parse");
+
 const pdfParse = async (buffer) => {
   try {
-    const pdf = await import('pdf-parse');
-    return pdf.default(buffer);
+    return parsePdf(buffer);
   } catch (error) {
     console.error("Error loading pdf-parse:", error);
     return { text: "" };
@@ -180,6 +187,60 @@ export const extractSkills = async (req, res) => {
   } catch (error) {
     console.error("Error extracting skills:", error);
     res.status(500).json({ message: "Failed to extract skills", error: error.message });
+  }
+};
+
+export const analyzeResume = async (req, res) => {
+  try {
+    const user = await User.findById(req.userData._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!user.resume) {
+      return res.status(400).json({
+        success: false,
+        message: "No resume found for this user",
+      });
+    }
+
+    const response = await fetch(user.resume);
+    if (!response.ok) {
+      return res.status(400).json({
+        success: false,
+        message: "Could not read resume file",
+      });
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    const cleanUrl = user.resume.split("?")[0];
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const resumeText = await extractTextFromResumeBuffer(
+      buffer,
+      contentType,
+      cleanUrl
+    );
+    const ats = calculateAtsFromText(resumeText);
+
+    user.skills = ats.skills;
+    user.atsScore = ats.score;
+    user.atsImprovements = ats.improvements;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "ATS analysis completed",
+      atsScore: user.atsScore,
+      atsImprovements: user.atsImprovements,
+      skills: user.skills,
+    });
+  } catch (error) {
+    console.error("Resume analysis error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to analyze resume",
+    });
   }
 };
 

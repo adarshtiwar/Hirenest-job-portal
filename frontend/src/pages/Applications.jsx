@@ -23,6 +23,15 @@ const Applications = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [resumeFile, setResumeFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const atsImprovements = Array.isArray(userData?.atsImprovements)
+    ? userData.atsImprovements
+    : [];
+  const displayAtsImprovements =
+    Number(userData?.atsScore || 0) === 0 && atsImprovements.length === 0
+      ? [
+          "ATS analysis has not been generated for this resume yet. Upload the resume again to calculate the score.",
+        ]
+      : atsImprovements;
 
   const handleResumeSave = async () => {
     if (!resumeFile) {
@@ -163,10 +172,9 @@ const Applications = () => {
             <h3 className="text-sm font-medium text-gray-700 mb-2">
               Key Areas of Improvement
             </h3>
-            {Array.isArray(userData?.atsImprovements) &&
-            userData.atsImprovements.length > 0 ? (
+            {displayAtsImprovements.length > 0 ? (
               <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                {userData.atsImprovements.map((item, index) => (
+                {displayAtsImprovements.map((item, index) => (
                   <li key={`${item}-${index}`}>{item}</li>
                 ))}
               </ul>
